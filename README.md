@@ -1,1 +1,3 @@
-# discordbot
+# BlackMesaBot
+
+Discord Bot
