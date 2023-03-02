@@ -1,9 +1,4 @@
-
+*.pyc
+BotToken.py
 .DS_Store
-<<<<<<< Updated upstream
-BotToken.py
-*.pyc
-=======
-*.pyc
-BotToken.py
->>>>>>> Stashed changes
+
