@@ -5,7 +5,10 @@ import urllib.request
 import re
 import youtube_dl
 
+from BotToken import BotToken
+
 client = discord.Client()
+#token = BotToken()
 
 @client.event
 async def on_ready():
@@ -30,4 +33,4 @@ async def on_message(message):
             voice_client.play(discord.FFmpegPCMAudio(URL))
         await message.channel.send(f'Now playing: {info["title"]}')
 
-client.run('YOUR_DISCORD_BOT_TOKEN')
+client.run(BotToken.get_token())
