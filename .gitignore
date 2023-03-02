@@ -1,0 +1,4 @@
+
+*.pyc
+BotToken.py
+.DS_Store
