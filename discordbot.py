@@ -4,11 +4,16 @@ import urllib.parse
 import urllib.request
 import re
 import youtube_dl
-
-from BotToken import BotToken
+import json
 
 client = discord.Client()
-#token = BotToken()
+
+# Open the JSON file and load its contents
+with open('data.json') as f:
+    data = json.load(f)
+
+# Access the values associated with the keys
+key = data['key']
 
 @client.event
 async def on_ready():
@@ -33,4 +38,4 @@ async def on_message(message):
             voice_client.play(discord.FFmpegPCMAudio(URL))
         await message.channel.send(f'Now playing: {info["title"]}')
 
-client.run(BotToken.get_token())
+client.run(key)
