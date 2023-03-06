@@ -9,7 +9,7 @@ import json
 client = discord.Client()
 
 # Open the JSON file and load its contents
-with open('data.json') as f:
+with open('key.json') as f:
     data = json.load(f)
 
 # Access the values associated with the keys

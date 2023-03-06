@@ -1,5 +1,3 @@
 *.pyc
-BotToken.py
 .DS_Store
 key.json
-
