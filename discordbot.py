@@ -6,7 +6,7 @@ import re
 import youtube_dl
 import json
 
-client = discord.Client()
+client = discord.Client(intents=discord.Intents.default())
 
 # Open the JSON file and load its contents
 with open('key.json') as f:
