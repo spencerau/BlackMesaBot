@@ -1,12 +1,11 @@
 import discord
-import asyncio
-import urllib.parse
-import urllib.request
-import re
 import youtube_dl
 import json
+import asyncio
 
-client = discord.Client(intents=discord.Intents.default())
+queue = []
+
+client = discord.Client(intents=discord.Intents.all())
 
 # Open the JSON file and load its contents
 with open('key.json') as f:
@@ -15,27 +14,78 @@ with open('key.json') as f:
 # Access the values associated with the keys
 key = data['key']
 
+queue = []
+
 @client.event
 async def on_ready():
-    print('Logged in as {0.user}'.format(client))
+    print(f'{client.user} has connected to Discord!')
 
 @client.event
 async def on_message(message):
-    if message.content.startswith('>play '):
-        query = message.content[6:]
-        query_string = urllib.parse.urlencode({'search_query': query})
-        html_content = urllib.request.urlopen('http://www.youtube.com/results?' + query_string)
-        search_results = re.findall(r"watch\?v=(\S{11})", html_content.read().decode())
-        url = 'http://www.youtube.com/watch?v=' + search_results[0]
-        voice_channel = message.author.voice.channel
-        if not voice_channel:
-            await message.channel.send('You are not connected to a voice channel.')
-            return
-        voice_client = await voice_channel.connect()
-        with youtube_dl.YoutubeDL() as ydl:
-            info = ydl.extract_info(url, download=False)
-            URL = info['formats'][0]['url']
-            voice_client.play(discord.FFmpegPCMAudio(URL))
-        await message.channel.send(f'Now playing: {info["title"]}')
+    if message.author == client.user:
+        return
+
+    if message.content.startswith('!play'):
+        url = message.content.split()[1]
+        if 'youtube.com' or 'youtu.be' in url:
+            await message.channel.send('Adding video to queue...')
+            queue.append(url)
+            if not message.guild.voice_client.is_playing():
+                await play_video(message.guild)
+        elif 'bitchute.com' in url:
+            await message.channel.send('Adding video to queue...')
+            queue.append(url)
+            if not message.guild.voice_client.is_playing():
+                await play_video(message.guild)
+        else:
+            await message.channel.send('Invalid URL')
+
+    if message.content == '!pause':
+        if message.guild.voice_client.is_playing():
+            message.guild.voice_client.pause()
+            await message.channel.send('Playback paused.')
+        else:
+            await message.channel.send('Nothing is playing at the moment.')
+
+    if message.content == '!skip':
+        if message.guild.voice_client.is_playing():
+            message.guild.voice_client.stop()
+            await message.channel.send('Skipping to the next video.')
+            await play_video(message.guild)
+        else:
+            await message.channel.send('Nothing is playing at the moment.')
+
+async def play_video(guild):
+    while len(queue) > 0:
+        url = queue.pop(0)
+        if 'youtube.com' in url:
+            await guild.voice_client.disconnect()
+            await asyncio.sleep(1)
+            channel = guild.get_channel(123456789012345678) # replace with voice channel ID
+            await channel.connect()
+            await channel.guild.change_voice_state(channel=channel, self_mute=False, self_deaf=True)
+            await channel.send('Playing video from YouTube...')
+            with youtube_dl.YoutubeDL() as ydl:
+                info = ydl.extract_info(url, download=False)
+                URL = info['url']
+                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(URL))
+                channel.guild.voice_client.play(source)
+                while channel.guild.voice_client.is_playing():
+                    await asyncio.sleep(1)
+        elif 'bitchute.com' in url:
+            await guild.voice_client.disconnect()
+            await asyncio.sleep(1)
+            channel = guild.get_channel(123456789012345678) # replace with voice channel ID
+            await channel.connect()
+            await channel.guild.change_voice_state(channel=channel, self_mute=False, self_deaf=True)
+            await channel.send('Playing video from BitChute...')
+            with youtube_dl.YoutubeDL() as ydl:
+                info = ydl.extract_info(url, download=False)
+                URL = info['url']
+                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(URL))
+                channel.guild.voice_client.play(source)
+                while channel.guild.voice_client.is_playing():
+                    await asyncio.sleep(1)
+    await guild.voice_client.disconnect()
 
 client.run(key)
