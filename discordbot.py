@@ -66,10 +66,10 @@ async def play_video(guild):
         url = queue.pop(0)
         if 'youtube.com' or 'youtu.be' in url:
             voice_channel = guild.voice_client.channel
-            await guild.voice_client.disconnect()
+            #await guild.voice_client.disconnect()
             await asyncio.sleep(1)
-            await voice_channel.connect()
-            await asyncio.sleep(1)
+            #await voice_channel.connect()
+            #await asyncio.sleep(1)
             await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
             await voice_channel.send('Playing video from YouTube...')
             with youtube_dl.YoutubeDL() as ydl:
@@ -81,9 +81,9 @@ async def play_video(guild):
                     await asyncio.sleep(1)
         elif 'bitchute.com' in url:
             voice_channel = guild.voice_client.channel
-            await guild.voice_client.disconnect()
-            await asyncio.sleep(1)
-            await voice_channel.connect()
+            #await guild.voice_client.disconnect()
+            #await asyncio.sleep(1)
+            #await voice_channel.connect()
             await asyncio.sleep(1)
             await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
             await voice_channel.send('Playing video from BitChute...')
