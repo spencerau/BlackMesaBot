@@ -2,6 +2,10 @@ import discord
 import youtube_dl
 import json
 import asyncio
+#import bitchute.py
+import requests
+import ffmpeg
+
 
 queue = []
 
@@ -80,6 +84,8 @@ async def play_video(guild):
                 while guild.voice_client.is_playing():
                     await asyncio.sleep(1)
         elif 'bitchute.com' in url:
+            play_bitchute_video(guild, url)
+            '''
             voice_channel = guild.voice_client.channel
             #await guild.voice_client.disconnect()
             #await asyncio.sleep(1)
@@ -94,6 +100,35 @@ async def play_video(guild):
                 guild.voice_client.play(source)
                 while guild.voice_client.is_playing():
                     await asyncio.sleep(1)
+            '''
     await guild.voice_client.disconnect()
+
+def get_bitchute_video_url(url):
+    video_id = url.split('/')[-1]
+    api_url = f'https://www.bitchute.com/video/{video_id}/'
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            video_url = data['result']['video_files'][0]['file']
+            return video_url
+        except:
+            return None
+    else:
+        return None
+
+async def play_bitchute_video(guild, url):
+    voice_channel = guild.voice_client.channel
+    await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
+    await voice_channel.send('Playing video from BitChute...')
+    video_url = get_bitchute_video_url(url)
+    if video_url:
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
+        guild.voice_client.play(source)
+        while guild.voice_client.is_playing():
+            await asyncio.sleep(1)
+    else:
+        await voice_channel.send('Unable to play video.')
+    #await guild.voice_client.disconnect()
 
 client.run(key)
