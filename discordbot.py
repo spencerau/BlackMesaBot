@@ -43,7 +43,7 @@ async def on_message(message):
 
     if message.content == '!pause':
         if message.guild.voice_client and message.guild.voice_client.is_playing():
-            message.guild.voic_client.pause()
+            message.guild.voice_client.pause()
             await message.channel.send('Playback paused.')
         else:
             await message.channel.send('Nothing is playing at the moment.')
@@ -82,23 +82,31 @@ async def play_video(guild):
     #await guild.voice_client.disconnect()
 
 def get_bitchute_video_url(url):
+    '''
+    print("URL: " + url)
     video_id = url.split('/')[-1]
     api_url = f'https://www.bitchute.com/video/{video_id}/'
-    response = requests.get(api_url)
+    print(api_url)
+    '''
+    response = requests.get(url)
+    print("Response Status Code: " + str(response.status_code))
     if response.status_code == 200:
         try:
             data = response.json()
             video_url = data['result']['video_files'][0]['file']
+            print("Response Status Code is 200")
             return video_url
         except:
+            print("except")
             return None
     else:
+        print("else")
         return None
 
 async def play_bitchute_video(guild, url):
     voice_channel = guild.voice_client.channel
     await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    await voice_channel.send('Playing video from BitChute...')
+    #await voice_channel.send('Playing video from BitChute...')
     video_url = get_bitchute_video_url(url)
     if video_url:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
@@ -120,7 +128,7 @@ def get_goyimtv_video_url(url):
 async def play_goyimtv_video(guild, url):
     voice_channel = guild.voice_client.channel
     await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    await voice_channel.send('Playing video from GoyimTV...')
+    #await voice_channel.send('Playing video from GoyimTV...')
     video_url = get_goyimtv_video_url(url)
     if video_url:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
