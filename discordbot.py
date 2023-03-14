@@ -1,10 +1,12 @@
 import discord
-#import youtube_dl
 import json
 import asyncio
 import requests
 import ffmpeg
 import re
+import traceback
+from bs4 import BeautifulSoup
+
 
 queue = []
 
@@ -79,43 +81,56 @@ async def play_video(guild):
         elif 'goyimtv.com' in url:
             await play_goyimtv_video(guild, url)
 
-    #await guild.voice_client.disconnect()
-
-def get_bitchute_video_url(url):
-    '''
-    print("URL: " + url)
-    video_id = url.split('/')[-1]
-    api_url = f'https://www.bitchute.com/video/{video_id}/'
-    print(api_url)
-    '''
+def get_html_bitchute_video_url(url):
     response = requests.get(url)
-    print("Response Status Code: " + str(response.status_code))
     if response.status_code == 200:
         try:
-            data = response.json()
-            video_url = data['result']['video_files'][0]['file']
-            print("Response Status Code is 200")
+            soup = BeautifulSoup(response.content, 'html.parser')
+            video_url = soup.find('source')['src']
+            #print("Video_Url: " + video_url)
+            #print("Response Status Code is 200")
             return video_url
-        except:
-            print("except")
+        except Exception:
+            traceback.print_exc()
             return None
     else:
-        print("else")
         return None
 
+def get_json_bitchute_video_url(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        try:
+            print(response.text)
+            data = response.json()
+            if 'result' in data and 'video_files' in data['result'] and data['result']['video_files']:
+                video_url = data['result']['video_files'][0]['file']
+                print("Video_Url: " + video_url)
+                print("Response Status Code is 200")
+                return video_url
+            else:
+                print("Invalid response data")
+                return None
+        except Exception:
+            traceback.print_exc()
+            return None
+    else:
+        return None
+        
 async def play_bitchute_video(guild, url):
     voice_channel = guild.voice_client.channel
     await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
     #await voice_channel.send('Playing video from BitChute...')
-    video_url = get_bitchute_video_url(url)
+    video_url = get_html_bitchute_video_url(url)
+    #print("video_url: " + str(video_url))
     if video_url:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
         guild.voice_client.play(source)
         while guild.voice_client.is_playing():
             await asyncio.sleep(1)
     else:
-        await voice_channel.send('Unable to play video.')
-
+        #await voice_channel.send('Unable to play video.')
+        print("Unable to play video")
+        
 def get_goyimtv_video_url(url):
     html = requests.get(url).text
     regex = r'sources:\s*\[\s*\{\s*src:\s*"(.*?)"\s*,\s*type:\s*"video/mp4"\s*\}'
@@ -140,3 +155,5 @@ async def play_goyimtv_video(guild, url):
 
 
 client.run(key)
+
+#play_bitchute_video
