@@ -16,9 +16,19 @@ with open('key.json') as f:
 # Access the values associated with the keys
 key = data['key']
 
+import json
 
+# Open the JSON file and load its contents
+with open('discord_ids.json', 'r') as f:
+    data = json.load(f)
+
+# Extract the list of numerical IDs from the JSON data
+id_list = [item['id'] for item in data if isinstance(item['id'], (int, float))]
+
+#print("ID LIST:")
+print(id_list)
 queue = []
-videoSites = ['youtube.com', 'youtu.be', 'bitchute.com', 'goyimtv.com']
+videoSites = ['youtube.com', 'youtu.be', 'bitchute.com']
 censorList = []
 
 client = discord.Client(intents=discord.Intents.all())
@@ -29,6 +39,10 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    
+    user_id = message.author.id
+    #print("user_id = " + str(user_id))
+
     if message.author == client.user:
         return
 
@@ -42,7 +56,7 @@ async def on_message(message):
                 voice_channel = message.author.voice.channel
                 await voice_channel.connect()
             if not message.guild.voice_client.is_playing():
-                await play_video(message, message.guild)
+                await play(message, message.guild)
         else:
             await message.channel.send('Invalid URL')
 
@@ -57,118 +71,94 @@ async def on_message(message):
         if message.guild.voice_client and message.guild.voice_client.is_playing():
             message.guild.voice_client.stop()
             await message.channel.send('Skipping to the next video.')
-            await play_video(message.guild)
+            await play_video(message, message.guild)
         else:
             await message.channel.send('Nothing is playing at the moment.')
 
-    elif 'kashmir' in message.content.lower():
-        await message.channel.send("The Kashmir region is rightful Pakistani clay and Allah will bless "
-                                   "the Hindu Pagan invaders with holy nuclear hellfire, Inshallah.")
+    elif message.content == '!help':
+        # implement listing out commands with descriptions
 
+    elif message.content == '!clearqueue':
+        # implement clearing the queue
 
-async def play_video(message, guild):
+    elif message.content == '!queue':
+        # implement showing the queue
+    
+
+    elif 'bjp' in message.content.lower():
+        #print("phrase BJP seen")
+        if user_id in id_list:
+            #print("user_id is in the id list")
+            if user_id == id_list[0]:
+                await message.channel.send("Help Support Your Local BJP Branch in Delhi!")
+                await message.channel.send("https://delhi.bjp.org/")
+            elif user_id == id_list[1] or user_id == id_list[3]:
+                await message.channel.send("Help Support Your Local BJP Branch in Uttar Pradesh")
+                await message.channel.send("https://up.bjp.org/")
+            elif user_id == id_list[2]:
+                await message.channel.send("Help Support Your Local BJP Branch in Rajasthan")
+                await message.channel.send("https://rajasthanbjp.org/")
+        # link to donate to BJP site
+
+    elif 'dog' in message.content.lower():
+        if user_id == id_list[4]:
+            await message.channel.send("https://www.vietworldkitchen.com/blog/tag/vietnamese-dog-recipes")
+
+    elif 'alex jones' in message.content.lower():
+        await message.channel.send("https://www.infowarsstore.com/")
+        # 77 href 
+        # href="url"
+
+async def play(message, guild):
     while len(queue) > 0:
         url = queue.pop(0)
         print("Bot is now playing from: " + url)
         await message.channel.send("Bot is now playing from: " + url)
 
-        if 'youtube.com' in url:
-            print("Doesn't support youtube")
-            #await play_youtube_video(guild, url)
+        if 'youtu' in url:
+            #print("Doesn't support youtube")
+            await play_video(guild, url, "youtube")
 
         elif 'bitchute.com' in url:
-            await play_bitchute_video(guild, url)
+            await play_video(guild, url, "bitchute")
 
-        elif 'goyimtv.com' in url:
-            await play_goyimtv_video(guild, url)
+        elif 'vimeo.com' in url:
+            await play_video(guild, url, "vimeo")
         
         else:
             print("Invalid URL")
 
-'''
-def get_youtube_url(url):
-    with youtube_dl.YoutubeDL() as ydl:
-                info = ydl.extract_info(url, download=False)
-                return info['url']
+# Set your desired User-Agent header
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+}
 
-async def play_youtube_video(guild, url):
-    voice_channel = guild.voice_client.channel
-    await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    video_url = get_youtube_url(url)
-    if video_url:
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
-        guild.voice_client.play(source)
-        while guild.voice_client.is_playing():
-            await asyncio.sleep(1)
-    else:
-        print("Unable to play video")
-'''
-        
-def get_html_bitchute_video_url(url):
-    response = requests.get(url)
+def get_video_url(url, platform):
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        try:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            video_url = soup.find('source')['src']
-            return video_url
-        except Exception:
-            traceback.print_exc()
-            return None
-    else:
-        return None
-
-def get_json_bitchute_video_url(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        try:
-            print(response.text)
-            data = response.json()
-            if 'result' in data and 'video_files' in data['result'] and data['result']['video_files']:
-                video_url = data['result']['video_files'][0]['file']
-                return video_url
-            else:
-                print("Invalid response data")
-                return None
-        except Exception:
-            traceback.print_exc()
-            return None
-    else:
-        return None
-        
-async def play_bitchute_video(guild, url):
-    voice_channel = guild.voice_client.channel
-    await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    video_url = get_html_bitchute_video_url(url)
-    if video_url:
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
-        guild.voice_client.play(source)
-        while guild.voice_client.is_playing():
-            await asyncio.sleep(1)
-    else:
-        print("Unable to play video")
-        
-def get_goyimtv_video_url(url):
-    html = requests.get(url).text
-    regex = r'sources:\s*\[\s*\{\s*src:\s*"(.*?)"\s*,\s*type:\s*"video/mp4"\s*\}'
-    matches = re.search(regex, html)
-    if matches:
-        video_url = matches.group(1)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        video_url = None
+        if platform == 'youtube' and 'youtube.com' in url:
+            iframe = soup.find('iframe', {'src': lambda s: 'youtube.com' in s})
+            if iframe:
+                video_url = iframe['src']
+        elif platform == 'bitchute' and 'bitchute.com' in url:
+            source = soup.find('source')
+            if source:
+                video_url = source['src']
         return video_url
     return None
 
-async def play_goyimtv_video(guild, url):
+async def play_video(guild, url, platform):
     voice_channel = guild.voice_client.channel
     await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    #await voice_channel.send('Playing video from GoyimTV...')
-    video_url = get_goyimtv_video_url(url)
+    video_url = get_video_url(url, platform)
     if video_url:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
         guild.voice_client.play(source)
         while guild.voice_client.is_playing():
             await asyncio.sleep(1)
     else:
-        await voice_channel.send('Unable to play video.')
-
+        print("Unable to play video")
 
 client.run(key)
-
