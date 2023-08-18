@@ -2,12 +2,13 @@ import discord
 import json
 import asyncio
 import requests
-import ffmpeg
-import re
-import traceback
-import youtube_dl
+import logging
+import yt_dlp
+import moviepy.editor as mp
 from bs4 import BeautifulSoup
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)  # Change to logging.DEBUG for more detailed logging
 
 # Open the JSON file and load its contents
 with open('key.json') as f:
@@ -77,13 +78,15 @@ async def on_message(message):
 
     elif message.content == '!help':
         # implement listing out commands with descriptions
+        print("help command - need to implement")
 
     elif message.content == '!clearqueue':
-        # implement clearing the queue
+        queue.clear()
+        await message.channel.send('Queue cleared.')
 
     elif message.content == '!queue':
         # implement showing the queue
-    
+        print("queue command - need to implement")
 
     elif 'bjp' in message.content.lower():
         #print("phrase BJP seen")
@@ -115,8 +118,7 @@ async def play(message, guild):
         print("Bot is now playing from: " + url)
         await message.channel.send("Bot is now playing from: " + url)
 
-        if 'youtu' in url:
-            #print("Doesn't support youtube")
+        if 'youtu' in url or 'youtube' in url:
             await play_video(guild, url, "youtube")
 
         elif 'bitchute.com' in url:
@@ -128,31 +130,34 @@ async def play(message, guild):
         else:
             print("Invalid URL")
 
-# Set your desired User-Agent header
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-}
-
-def get_video_url(url, platform):
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, 'html.parser')
-        video_url = None
-        if platform == 'youtube' and 'youtube.com' in url:
-            iframe = soup.find('iframe', {'src': lambda s: 'youtube.com' in s})
-            if iframe:
-                video_url = iframe['src']
-        elif platform == 'bitchute' and 'bitchute.com' in url:
+async def get_video_url(url, platform):
+    if platform == 'youtube':
+        ydl_opts = {
+            'quiet': True,  # Enable quiet mode
+            'format': 'best'  # Download the best available quality
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
+            video_url = info_dict.get('url', None)
+            #print("YouTube Video URL:", video_url)  # Print the video URL
+    elif platform == 'bitchute' and 'bitchute.com' in url:
+        response = requests.get(url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
             source = soup.find('source')
-            if source:
-                video_url = source['src']
-        return video_url
-    return None
+            video_url = source.get('src', None)
+            print("Bitchute Video URL:", video_url)  # Print the video URL
+        else:
+            video_url = None
+    else:
+        video_url = None
+    return video_url
 
 async def play_video(guild, url, platform):
     voice_channel = guild.voice_client.channel
     await voice_channel.guild.change_voice_state(channel=voice_channel, self_mute=False, self_deaf=True)
-    video_url = get_video_url(url, platform)
+    video_url = await get_video_url(url, platform)  # Await the asynchronous function
+    
     if video_url:
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(video_url))
         guild.voice_client.play(source)
